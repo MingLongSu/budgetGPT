@@ -13,6 +13,12 @@ class Tokenizer:
         Input(s):
             input_path: string
                 Path to input text file for tokenization.
+            train_output_path: string
+                Train output path for train processed data.
+            validation_output_path: string
+                Validation output path for validation processed data.
+            split_percent: float
+                Train-validation split percentage.
         """
 
         # Open file and read its contents
@@ -60,19 +66,19 @@ class Tokenizer:
         else:
             logger.logging("train, validation files not asked to be saved so skipped.")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     Using this space for debugging.
     """
 
     # Init paths and dirs for input and output
     load_dotenv()
-    INPUT_DIR = os.environ.get('INPUT_DIR')
-    TRAIN_DIR = os.environ.get('TRAIN_DIR')
-    VALIDATION_DIR = os.environ.get('VALIDATION_DIR')
-    TRAIN_PERCENTAGE = float(os.environ.get('TRAIN_PERCENTAGE'))
-    INPUT_FILE_NAME = os.environ.get('TINY_SHAKESPEARE_1_INPUT')
-    OUTPUT_FILE_NAME = os.environ.get('TINY_SHAKESPEARE_1_OUTPUT')
+    INPUT_DIR = os.environ.get("INPUT_DIR")
+    TRAIN_DIR = os.environ.get("TRAIN_DIR")
+    VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
+    TRAIN_PERCENTAGE = float(os.environ.get("TRAIN_PERCENTAGE"))
+    INPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_INPUT")
+    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_OUTPUT")
 
     # Init and use tokenizer
     tokenizer = Tokenizer()
