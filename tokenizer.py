@@ -1,6 +1,10 @@
 import torch
 import os
+from logger import Logger
 from dotenv import load_dotenv
+
+# Initialize global logger tool
+logger = Logger()
 
 class Tokenizer:
     def character_level_tokenize(self, input_path: str, train_output_path: str=None, validation_output_path: str=None, split_percent: float=None) -> None:
@@ -18,8 +22,8 @@ class Tokenizer:
         # Capture unique chars and vocabulary size
         unique_chars = sorted(list(set(text_content)))
         vocabulary_size = len(unique_chars)
-        print(f"[ LOGGER ]: unique characters of given text -> { unique_chars }")
-        print(f"[ LOGGER ]: vocabulary size -> { vocabulary_size }")
+        logger.logging(f"unique characters of given text -> { unique_chars }")
+        logger.logging(f"vocabulary size -> { vocabulary_size }")
 
         # Create encode, decode mapping functions
         character_to_integer_mapping = { character:index for index, character in enumerate(unique_chars) }
@@ -30,12 +34,12 @@ class Tokenizer:
         # Apply encode, decode mappings to get label encodings
         """
         sample = text_content[:50]
-        print(f"[ DEBUG ]: encode -> { encode(sample) }")
-        print(f"[ DEBUG ]: decode -> { decode(encode(sample)) }")
+        logger.debug(f"encode -> { encode(sample) }")
+        logger.debug(f"decode -> { decode(encode(sample)) }")
         """
         processed_content = torch.tensor(encode(text_content), dtype=torch.long)
-        print(f"[ LOGGER ]: processed_data shape, dtype -> { processed_content.shape }, { processed_content.dtype }")
-        print(f"[ LOGGER ]: processed_data sample (first 100) -> (below)\n{ processed_content[:100] }")
+        logger.logging(f"processed_data shape, dtype -> { processed_content.shape }, { processed_content.dtype }")
+        logger.logging(f"processed_data sample (first 100) -> (below)\n{ processed_content[:100] }")
 
         # Check if train, validation splits wish to be saved
         if (train_output_path and validation_output_path and 0.0 <= split_percent <= 1.0):
@@ -50,11 +54,11 @@ class Tokenizer:
             try: 
                 torch.save(train_data, train_output_path)
                 torch.save(validation_data, validation_output_path)
-                print("[ LOGGING ]: train, validation files successfully saved.")
+                logger.logging("train, validation files successfully saved.")
             except Exception as e:
-                print(f"[ ERROR ]: failure occurred -> (below)\n{ e }")
+                logger.error(f"failure occurred -> (below)\n{ e }")
         else:
-            print("[ LOGGING ]: train, validation files not asked to be saved so skipped.")
+            logger.logging("train, validation files not asked to be saved so skipped.")
 
 if __name__ == '__main__':
     """
@@ -67,8 +71,8 @@ if __name__ == '__main__':
     TRAIN_DIR = os.environ.get('TRAIN_DIR')
     VALIDATION_DIR = os.environ.get('VALIDATION_DIR')
     TRAIN_PERCENTAGE = float(os.environ.get('TRAIN_PERCENTAGE'))
-    INPUT_FILE_NAME = os.environ.get('STAR_WARS_A_NEW_HOPE_DIALOGUE_INPUT')
-    OUTPUT_FILE_NAME = os.environ.get('STAR_WARS_A_NEW_HOPE_DIALOGUE_OUTPUT')
+    INPUT_FILE_NAME = os.environ.get('TINY_SHAKESPEARE_1_INPUT')
+    OUTPUT_FILE_NAME = os.environ.get('TINY_SHAKESPEARE_1_OUTPUT')
 
     # Init and use tokenizer
     tokenizer = Tokenizer()
