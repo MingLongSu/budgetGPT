@@ -1,5 +1,6 @@
 import torch
 import os
+import json
 from logger import Logger
 from dotenv import load_dotenv
 
@@ -22,7 +23,7 @@ class Tokenizer:
         """
 
         # Open file and read its contents
-        with open(input_path, 'r', encoding='utf-8') as file_reader:
+        with open(input_path, "r", encoding="utf-8") as file_reader:
             text_content = file_reader.read()
 
         # Capture unique chars and vocabulary size
