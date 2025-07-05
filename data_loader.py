@@ -18,7 +18,7 @@ class DataLoader:
         self.train_data_path = train_data_path
         self.validation_data_path = validation_data_path
 
-    def get_batch(self, split_type: str, batch_number: int) -> None:
+    def get_batch(self, split_type: str, batch_number: int, verbosity: int=0) -> None:
         """
         Fetch a batch based on the current split (train/validation)
         Input(s):
@@ -26,11 +26,15 @@ class DataLoader:
                 Train or validation split specification.
             batch_number: int
                 Number to keep track how batches collected so far.
+            verbosity: int
+                If 0, do not log info. 
+                If 1, log the info.
         """
 
         # Get processed data based on split type
         data = torch.load(self.train_data_path) if (split_type == "train") else torch.load(self.validation_data_path)
-        logger.logging(f"data for { split_type } loaded successfully.")
+        if (verbosity): 
+            logger.logging(f"data for { split_type } loaded successfully.")
 
         # Get random points to start from
         start_points = torch.randint(0, data.shape[0] - self.block_size, (self.batch_size,))
@@ -39,7 +43,8 @@ class DataLoader:
         X = torch.stack([data[start_point:start_point + self.block_size] for start_point in start_points])
         y = torch.stack([data[start_point + 1:start_point + self.block_size + 1] for start_point in start_points])
         X, y = X.to(self.device), y.to(self.device)
-        logger.logging(f"batch #{ batch_number } collected successfully.")
+        if (verbosity): 
+            logger.logging(f"batch #{ batch_number } collected successfully.")
 
         return X, y
         
@@ -52,7 +57,7 @@ if __name__ == "__main__":
     load_dotenv()
     TRAIN_DIR = os.environ.get("TRAIN_DIR")
     VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
-    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_OUTPUT")
+    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_CHARACTER_TOKENIZED_OUTPUT")
     BATCH_SIZE = int(os.environ.get("BATCH_SIZE"))
     BLOCK_SIZE = int(os.environ.get("BLOCK_SIZE"))
     SEED = int(os.environ.get("SEED"))

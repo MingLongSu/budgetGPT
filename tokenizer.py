@@ -1,5 +1,6 @@
 import torch
 import os
+import json
 from logger import Logger
 from dotenv import load_dotenv
 
@@ -22,7 +23,7 @@ class Tokenizer:
         """
 
         # Open file and read its contents
-        with open(input_path, 'r', encoding='utf-8') as file_reader:
+        with open(input_path, "r", encoding="utf-8") as file_reader:
             text_content = file_reader.read()
 
         # Capture unique chars and vocabulary size
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
     TRAIN_PERCENTAGE = float(os.environ.get("TRAIN_PERCENTAGE"))
     INPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_INPUT")
-    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_OUTPUT")
+    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_CHARACTER_TOKENIZED_OUTPUT")
 
     # Init and use tokenizer
     tokenizer = Tokenizer()
