@@ -79,7 +79,7 @@ if __name__ == "__main__":
     VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
     TRAIN_PERCENTAGE = float(os.environ.get("TRAIN_PERCENTAGE"))
     INPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_INPUT")
-    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_OUTPUT")
+    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_CHARACTER_TOKENIZED_OUTPUT")
 
     # Init and use tokenizer
     tokenizer = Tokenizer()
