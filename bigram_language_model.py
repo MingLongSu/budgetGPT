@@ -11,6 +11,7 @@ from logger import Logger
 logger = Logger()
 
 class BigramLanguageModel(nn.Module):
+
     def __init__(self, vocabulary_size: int):
         super().__init__()
 
@@ -24,7 +25,7 @@ class BigramLanguageModel(nn.Module):
         # i (2) |-0.3 0.6 0.1 0.4  |
         # ! (3) | 0.0 -0.5 0.9 0.2 |
         logger.logging("Creating BigramLanguageModel...")
-        logger.logging(f"embedding size -> ({ vocabulary_size }, { vocabulary_size })")
+        logger.logging(f"token embedding table size -> ({ vocabulary_size }, { vocabulary_size })")
         self.token_embedding_table = nn.Embedding(vocabulary_size, vocabulary_size)
 
     def forward(self, X: torch.Tensor, y: torch.Tensor|None=None, verbosity: int=0) -> Tuple[torch.Tensor, torch.Tensor|None]:

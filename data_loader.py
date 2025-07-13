@@ -7,6 +7,7 @@ from logger import Logger
 logger = Logger()
 
 class DataLoader:
+    
     def __init__(self, batch_size: int, block_size: int, train_data_path: str, validation_data_path: str) -> None:
         logger.logging(f"initializing dataloader...")
         self.device = "cuda" if torch.cuda.is_available else "cpu"

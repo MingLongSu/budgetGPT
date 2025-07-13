@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 logger = Logger()
 
 class Tokenizer:
+    
     def character_level_tokenize(self, input_path: str, train_output_path: str=None, validation_output_path: str=None, split_percent: float=None) -> None:
         """
         Character level tokenization based on given input file path.
