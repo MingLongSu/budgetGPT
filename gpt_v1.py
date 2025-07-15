@@ -386,7 +386,7 @@ if __name__ == "__main__":
         dropout=DROPOUT
     )
     model.to(DEVICE)
-    logger.logging(f"budgetGPT number of parameters -> { sum(param.nueml() for param in model.parameters())/1e6 }M")
+    logger.logging(f"budgetGPT number of parameters -> { sum(param.numel() for param in model.parameters())/1e6 }M")
 
     dataloader = DataLoader(
         BATCH_SIZE,
