@@ -18,6 +18,7 @@ class DataLoader:
         logger.logging(f"block_size -> { self.block_size }")
         self.train_data_path = train_data_path
         self.validation_data_path = validation_data_path
+        logger.logging(f"dataloader initialization complete...")
 
     def get_batch(self, split_type: str, batch_number: int, verbosity: int=0) -> None:
         """

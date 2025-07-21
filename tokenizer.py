@@ -79,8 +79,8 @@ if __name__ == "__main__":
     TRAIN_DIR = os.environ.get("TRAIN_DIR")
     VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
     TRAIN_PERCENTAGE = float(os.environ.get("TRAIN_PERCENTAGE"))
-    INPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_INPUT")
-    OUTPUT_FILE_NAME = os.environ.get("TINY_SHAKESPEARE_1_CHARACTER_TOKENIZED_OUTPUT")
+    INPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_INPUT")
+    OUTPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_CHARACTER_TOKENIZED_OUTPUT")
 
     # Init and use tokenizer
     tokenizer = Tokenizer()

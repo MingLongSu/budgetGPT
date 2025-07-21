@@ -198,7 +198,7 @@ class GPTLanguageModel(nn.Module):
             # Introduce necessary randonmness, break symmetry and ensure small, but non-zero, init signals
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, X: torch.Tensor, y: torch.Tensor|None=None, verbosity: int=0) -> Tuple[torch.Tensor, torch.Tensor|None]:
+    def forward(self, X: torch.Tensor, y: torch.Tensor|None=None, verbosity: int=0, device: str="cpu") -> Tuple[torch.Tensor, torch.Tensor|None]:
         """
         Compute the forward pass on input X.
 
@@ -209,15 +209,30 @@ class GPTLanguageModel(nn.Module):
                 These are our targets/ground truths. From tokenizer, we have 
                 (B=batch size, T=time/sequence length) tensor as well of course.
         """
-
         # Unpack and get data dimensionality
         B, T = X.shape
+
+        # Debug prints (keep these, they are helpful)
+        """
+        print(f"DEBUG IN FORWARD:")
+        print(f"  Input X shape: {X.shape}")
+        print(f"  Sequence length (T): {T}")
+        print(f"  Model's stored block_size: {self.block_size}")
+        print(f"  Positional embedding table's num_embeddings: {self.positional_embedding_table.num_embeddings}")
+        print(f"  Max index torch.arange will request (T-1): {T - 1}")
+        """
+
+        # Explicit check for the problem:
+        if T > self.positional_embedding_table.num_embeddings:
+            raise ValueError(f"Sequence length T ({T}) exceeds positional embedding table capacity "
+                            f"({self.positional_embedding_table.num_embeddings}). "
+                            f"This means X was not cropped correctly or block_size is mismatched.")
 
         # Convert input tokens into embeddings
         token_embeddings = self.token_embedding_table(X)
 
         # Create positional embeddings for each position
-        positional_embeddings = self.positional_embedding_table(torch.arange(T, device=DEVICE))
+        positional_embeddings = self.positional_embedding_table(torch.arange(T, device=device))
 
         # Combine token and positional embeddings
         X_new = token_embeddings + positional_embeddings
@@ -256,7 +271,7 @@ class GPTLanguageModel(nn.Module):
 
         return logits, loss
     
-    def generate(self, X: torch.Tensor, max_new_tokens: int=100): 
+    def generate(self, X: torch.Tensor, max_new_tokens: int=100, device: str="cuda"): 
         """
         Given some input X, build off of each within batch using only max_new_tokens
         number of tokens, one at a time.
@@ -266,17 +281,27 @@ class GPTLanguageModel(nn.Module):
             max_new_tokens: int
                 Maximum number of tokens to use to build off of each phrase
                 in batch from associated input X.
+            device: str
+                Device for which we wish to operate on.
         """
 
         # Add only max_new_tokens number of new tokens
         # New shape should be (B, T + max_new_tokens)
-        for _ in range(max_new_tokens):
+        for i in range(max_new_tokens):
 
             # Crop input to last block size tokens
             X_cropped = X[:, -self.block_size:]
 
+            """
+            print(f"DEBUG GENERATE LOOP {i}:")
+            print(f"POS EMBD TABLE SHAPE: { self.positional_embedding_table.weight.shape }")
+            print(f"  X_cropped shape: {X_cropped.shape}")
+            print(f"  self.block_size: {self.block_size}")
+            print(f"  X_cropped device: {X_cropped.device}")
+            """
+
             # Get logits and loss based on the input X
-            logits, _ = self(X_cropped)
+            logits, _ = self(X_cropped, device=device)
 
             # To continue generation, we only care about last token, new shape (B, V)
             logits = logits[:, -1, :] 
@@ -296,7 +321,7 @@ class GPTLanguageModel(nn.Module):
         return X
 
 @torch.no_grad()
-def estimate_loss(model: torch.nn.Module, dataloader: DataLoader, eval_iterations: int):
+def estimate_loss(model: torch.nn.Module, dataloader: DataLoader, eval_iterations: int, device: str="cpu"):
     """
     Run train, validation loss computation eval_iterations steps and return mean loss.
     Input(s):
@@ -306,6 +331,8 @@ def estimate_loss(model: torch.nn.Module, dataloader: DataLoader, eval_iteration
             Dataloader to fetch batches of data.
         eval_iterations: int
             Number of evaluation steps to run for.
+        device: str
+            Device being used for eval.
     """
 
     estimate_loss = {}
@@ -322,7 +349,7 @@ def estimate_loss(model: torch.nn.Module, dataloader: DataLoader, eval_iteration
 
             # Get batch of data based on split for eval (no_grad) and compute loss
             X, y = dataloader.get_batch(split, eval_iteration)
-            _, loss = model(X, y)
+            _, loss = model(X, y, device=device)
             losses[eval_iteration] = loss.item()
 
         # Average out losses for single clean number
@@ -401,7 +428,7 @@ if __name__ == "__main__":
     y = y.to(DEVICE)
     
     # Generate some untrained-gibbberish content
-    untrained_gibberish = "".join(decode(model.generate(X, 300)[0].tolist()))
+    untrained_gibberish = "".join(decode(model.generate(X, 300, device=DEVICE)[0].tolist()))
     logger.logging(f"Generating some untrained-gibberish -> (below)\n{ untrained_gibberish }")
 
     # Init optimizer for training
@@ -414,7 +441,7 @@ if __name__ == "__main__":
         if (iteration % EVAL_INTERVAL == 0):
 
             # Compute train and validation loss at interval
-            losses = estimate_loss(model, dataloader, EVAL_ITERATIONS)
+            losses = estimate_loss(model, dataloader, EVAL_ITERATIONS, device=DEVICE)
             train_losses = round(losses['train'].item(), ndigits=4)
             validation_losses = round(losses['validation'].item(), ndigits=4)
             logger.logging(f"Iteration { iteration }: train loss -> { train_losses }, validation loss -> { validation_losses }")
@@ -423,11 +450,11 @@ if __name__ == "__main__":
         X, y = dataloader.get_batch("train", batch_number=iteration)
 
         # Evaluate loss 
-        logits, loss = model(X, y)
+        logits, loss = model(X, y, device=DEVICE)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
     # Generate some trained-gibbberish content
-    trained_gibberish = "".join(decode(model.generate(X, 300)[0].tolist()))
+    trained_gibberish = "".join(decode(model.generate(X, 300, device=DEVICE)[0].tolist()))
     logger.logging(f"Generating some trained-gibberish -> (below)\n{ trained_gibberish }")
