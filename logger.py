@@ -7,4 +7,7 @@ class Logger:
 
     def debug(self, text):
         print(f"[ DEBUG ]: { text }")
+
+    def warning(self, text):
+        print(f"[ WARNING ]: { text }")
         

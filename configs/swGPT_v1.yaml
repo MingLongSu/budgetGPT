@@ -1,0 +1,33 @@
+# Model Architecture Parameters
+model:
+  vocab_size: 74
+  n_embd: 384
+  n_head: 6
+  n_layer: 6
+  block_size: 256
+  dropout: 0.2
+
+# Training Parameters
+train:
+  lr: 3.0e-4
+  optimizer: "AdamW"
+  batch_size: 64
+  max_iters: 30000
+  eval_interval: 500
+  eval_iters: 200
+  save_interval: 500
+  train_dataset_path: "./processed_data/train/character_tokenized_star_wars_a_new_hope.pt"
+  val_dataset_path: "./processed_data/validation/character_tokenized_star_wars_a_new_hope.pt"
+  output_dir: "./checkpoints/swGPT_v1_checkpoints"
+
+# Generation Parameters (defaults)
+generate:
+  max_new_tokens: 500
+  temperature: 0.8
+  top_k: 50 
+
+# Global/Shared Parameters
+global:
+  device: "cuda"
+  seed: 1337
+  raw_data_path: "./datasets/star_wars_a_new_hope.txt"
