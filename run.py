@@ -3,6 +3,8 @@ import yaml
 import os
 import torch
 import time
+import torch.cuda.amp as amp
+import contextlib
 from gpt_v1 import GPTLanguageModel, estimate_loss
 from data_loader import DataLoader
 from logger import Logger
@@ -15,6 +17,8 @@ if __name__ == "__main__":
     arg_parser.add_argument("--model", type=str, help="Model name.", default="GPT2")
     arg_parser.add_argument("--job_name", type=str, help="Name of job being run.", default="0")
     arg_parser.add_argument("--config", type=str, help="Path to config for loading.")
+
+    arg_parser.add_argument("--enable_amp", type=bool, help="Use AMP during training.", default=False)
 
     args = arg_parser.parse_args()
 
@@ -69,6 +73,12 @@ if __name__ == "__main__":
 
     torch.manual_seed(SEED)
 
+    if (DEVICE.startswith("cuda") and args.enable_amp):
+        scaler = amp.GradScaler()
+        logger.logging("Automatic Mixed Precision (AMP) usage state -> true")
+    else:
+        logger.logging("Automatic Mixed Precision (AMP) usage state -> false")
+
     if (args.model == "budgetGPT"):
 
         model = GPTLanguageModel(
@@ -109,15 +119,45 @@ if __name__ == "__main__":
             optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
         logger.logging(f"optimizer -> { OPTIMIZER.lower() }")
 
+        logger.logging("Trainig starting...")
+        total_time = 0
         start_time = time.time()
         for iteration in range(MAX_ITERATIONS + 1):
 
+            X, y = dataloader.get_batch("train", iteration)
+            X, y = X.to(DEVICE), y.to(DEVICE)
+
+            autocast_context = amp.autocast() if scaler else contextlib.nullcontext()
+            optimizer.zero_grad(set_to_none=True)
+
+            if (autocast_context):
+                logits, loss = model(X, y, device=DEVICE)
+
+            if (scaler):
+                scaler.scale(loss).backward()
+            else:
+                loss.backward()
+
+            if (scaler):
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
+
             if (iteration % EVAL_INTERVAL == 0):
-                losses = estimate_loss(model, dataloader, EVAL_ITERATIONS, DEVICE)
+                model.eval()
+
+                with torch.no_grad():
+                    with autocast_context:
+                        losses = estimate_loss(model, dataloader, EVAL_ITERATIONS, DEVICE)
+
+                model.train()
+
                 train_losses = round(losses['train'].item(), ndigits=4)
                 validation_losses = round(losses['validation'].item(), ndigits=4)
                 end_time = time.time()
                 logger.logging(f"Iteration { iteration }: train loss -> { train_losses }, validation loss -> { validation_losses }, time spent -> { end_time - start_time } seconds")
+                total_time += end_time - start_time
                 start_time = end_time
 
                 if (iteration % SAVE_INTERVAL == 0):
@@ -134,13 +174,8 @@ if __name__ == "__main__":
                         logger.logging("Save successful!")
                     except Exception as e:
                         logger.error(f"{ e }")
-
-            X, y = dataloader.get_batch("train", batch_number=iteration)
-
-            logits, loss = model(X, y, device=DEVICE)
-            optimizer.zero_grad(set_to_none=True)
-            loss.backward()
-            optimizer.step()
+                
+        logger.logging(f"Training complete, took -> { total_time }s")
 
         trained_gibberish = "".join(decode(model.generate(X, MAX_NEW_TOKENS, device=DEVICE)[0].tolist()))
         logger.logging(f"Generating some trained-gibberish -> (below)\n{ trained_gibberish }")
