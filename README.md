@@ -1,7 +1,7 @@
 ### BudgetGPT
 
 Better understanding transformer-based architecture and optimizations under the hood.  
-Initially trained on tinyshakespeare. 
+Initially trained on tinyshakespeare.  
 Now trying to train the model to become one of the Whills that will help narrate me a nice Star Wars story.
 
 # 🗂️ Datasets
