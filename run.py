@@ -13,20 +13,22 @@ logger = Logger()
 
 if __name__ == "__main__":
 
+    # Handlle cmd line arguments
     arg_parser = argparse.ArgumentParser(description="Parse arguments for selecting model, selecting dataset, and running train & eval.")
     arg_parser.add_argument("--model", type=str, help="Model name.", default="GPT2")
     arg_parser.add_argument("--job_name", type=str, help="Name of job being run.", default="0")
     arg_parser.add_argument("--config", type=str, help="Path to config for loading.")
 
-    arg_parser.add_argument("--enable_amp", type=bool, help="Use AMP during training.", default=False)
+    arg_parser.add_argument("--enable_amp", type=bool, help="Use AMP during training.", default=True)
+    arg_parser.add_argument("--use_torch_dataloader", type=str, help="Use the torch dataloader.", default=True)
 
     args = arg_parser.parse_args()
 
+    # Validate and read yaml file for config info
     if (not os.path.exists(args.config)):
         logger.error(f"Error: Configuration file '{args.config}' not found.")
         logger.error("Please ensure the config file exists and the path is correct.")
         exit(1)
-
     try:
         with open(args.config, "r") as config_file:
             config = yaml.safe_load(config_file)
@@ -73,6 +75,7 @@ if __name__ == "__main__":
 
     torch.manual_seed(SEED)
 
+    # AMP enablement
     if (DEVICE.startswith("cuda") and args.enable_amp):
         scaler = amp.GradScaler()
         logger.logging("Automatic Mixed Precision (AMP) usage state -> true")

@@ -1,6 +1,8 @@
 import torch
 import os
 import json
+from transformers import AutoTokenizer
+
 from logger import Logger
 from dotenv import load_dotenv
 
@@ -54,7 +56,7 @@ class Tokenizer:
 
             # Collect train, validation samples
             num_samples = processed_content.shape[0] 
-            num_samples_train = int(TRAIN_PERCENTAGE * num_samples)
+            num_samples_train = int(split_percent * num_samples)
             train_data = processed_content[:num_samples_train]
             validation_data = processed_content[num_samples_train:]
 
@@ -67,6 +69,66 @@ class Tokenizer:
                 logger.error(f"failure occurred -> (below)\n{ e }")
         else:
             logger.logging("train, validation files not asked to be saved so skipped.")
+
+
+    def bpe_tokenize(self, input_files: str, train_output_dir: str, validation_output_dir: str, train_split: float) -> None:
+        """
+        BPE tokenization via the GPT2 tokenizer.
+        Input(s):
+            input_files: string
+                Path to input text file for tokenization.
+            train_output_path: string
+                Train output path for train processed data.
+            validation_output_path: string
+                Validation output path for validation processed data.
+            split_percent: float
+                Train-validation split percentage.
+        """
+
+        file_paths = input_files.split(",")
+
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+
+        try:
+            for file_path in file_paths:
+                with open(file_path, "r") as file_reader:
+                    content = file_reader.read()
+
+                tokenized_content = tokenizer(content)
+                token_ids_list = tokenized_content.input_ids
+                num_samples = len(token_ids_list)
+
+                block_size = tokenizer.model_max_length
+                train_token_chunks = []
+                validation_token_chunks = []
+                for i in range(0, num_samples, block_size):
+                    chunk = token_ids_list[i : i + block_size]
+                    chunk_size = len(chunk)
+
+                    if (chunk_size == block_size):
+                        num_samples_train = int(chunk_size * train_split)
+                        train_token_chunks.append(chunk[:num_samples_train])
+                        validation_token_chunks.append(chunk[num_samples_train:])
+
+                if (train_output_dir and validation_output_dir and 0.0 <= train_split <= 1.0):
+                    train_data = torch.tensor(train_token_chunks, dtype=torch.long)
+                    new_file_extracted_name = file_path.split('\\')[-1].split('.')[0]
+                    new_file_name = "bpe_tokenized" + f"_{ new_file_extracted_name }.pt"
+                    new_file_path = os.path.join(train_output_dir, new_file_name)
+                    logger.logging(f"Saving tokenized version of { file_path } here -> { new_file_path }")
+                    torch.save(train_data, new_file_path)
+                    logger.logging(f"Save successful.")
+
+                    validation_data = torch.tensor(validation_token_chunks, dtype=torch.long)
+                    new_file_path = os.path.join(validation_output_dir, new_file_name)
+                    logger.logging(f"Saving tokenized version of { file_path } here -> { new_file_path }")
+                    torch.save(validation_data, new_file_path)
+                    logger.logging(f"Save successful.")
+                else:
+                    logger.logging("train, validation files not asked to be saved so skipped.")
+            
+        except Exception as e:
+            logger.error(f"failure occurred -> (below)\n{ e }")
 
 if __name__ == "__main__":
     """
@@ -82,11 +144,15 @@ if __name__ == "__main__":
     INPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_INPUT")
     OUTPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_CHARACTER_TOKENIZED_OUTPUT")
 
-    # Init and use tokenizer
     tokenizer = Tokenizer()
-    processed_data = tokenizer.character_level_tokenize(
-        os.path.join(INPUT_DIR, INPUT_FILE_NAME),
-        os.path.join(TRAIN_DIR, OUTPUT_FILE_NAME),
-        os.path.join(VALIDATION_DIR, OUTPUT_FILE_NAME),
-        TRAIN_PERCENTAGE
+    
+    
+    INPUT_FILE_NAME_1 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_A_NEW_HOPE_INPUT"))
+    INPUT_FILE_NAME_2 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_EMPIRE_STRIKES_BACK_INPUT"))
+    INPUT_FILE_NAME_3 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_RETURN_OF_THE_JEDI_INPUT"))
+    tokenizer.bpe_tokenize(
+        input_files=INPUT_FILE_NAME_1 + "," + INPUT_FILE_NAME_2 + "," + INPUT_FILE_NAME_3,
+        train_output_dir=TRAIN_DIR,
+        validation_output_dir=VALIDATION_DIR,
+        train_split=0.8
     )
