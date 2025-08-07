@@ -1,8 +1,8 @@
 import torch
 import os
 import json
+import argparse
 from transformers import AutoTokenizer
-
 from logger import Logger
 from dotenv import load_dotenv
 
@@ -135,24 +135,34 @@ if __name__ == "__main__":
     Using this space for debugging.
     """
 
-    # Init paths and dirs for input and output
-    load_dotenv()
-    INPUT_DIR = os.environ.get("INPUT_DIR")
-    TRAIN_DIR = os.environ.get("TRAIN_DIR")
-    VALIDATION_DIR = os.environ.get("VALIDATION_DIR")
-    TRAIN_PERCENTAGE = float(os.environ.get("TRAIN_PERCENTAGE"))
-    INPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_INPUT")
-    OUTPUT_FILE_NAME = os.environ.get("STAR_WARS_A_NEW_HOPE_CHARACTER_TOKENIZED_OUTPUT")
+    parser = argparse.ArgumentParser(description="Tokenize a dataset using either character-level or BPE tokenization.")
+    parser.add_argument("--tokenizer_type", type=str, choices=["character", "bpe"], required=True,
+                        help="Specify the tokenizer type: 'character' or 'bpe'.")
+    parser.add_argument("--input_files", type=str, required=True,
+                        help="Path to the input text file(s). For BPE, you can provide multiple files separated by commas.")
+    parser.add_argument("--train_output_dir", type=str, default="./", 
+                        help="Directory to save the train tokenized data.")
+    parser.add_argument("--validation_output_dir", type=str, default="./", 
+                        help="Directory to save the validation tokenized data.")
+    parser.add_argument("--train_split", type=float, default=0.8,
+                        help="Percentage of data to use for training (0.0 to 1.0). Default is 0.8.")
 
+    args = parser.parse_args()
     tokenizer = Tokenizer()
-    
-    
-    INPUT_FILE_NAME_1 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_A_NEW_HOPE_INPUT"))
-    INPUT_FILE_NAME_2 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_EMPIRE_STRIKES_BACK_INPUT"))
-    INPUT_FILE_NAME_3 = os.path.join(INPUT_DIR, os.environ.get("STAR_WARS_RETURN_OF_THE_JEDI_INPUT"))
-    tokenizer.bpe_tokenize(
-        input_files=INPUT_FILE_NAME_1 + "," + INPUT_FILE_NAME_2 + "," + INPUT_FILE_NAME_3,
-        train_output_dir=TRAIN_DIR,
-        validation_output_dir=VALIDATION_DIR,
-        train_split=0.8
-    )
+    if args.tokenizer_type == "character":
+        if "," in args.input_files:
+            logger.error("Character tokenization can only process one file at a time (for now).")
+        else:
+            tokenizer.character_level_tokenize(
+                input_path=args.input_files,
+                train_output_path=os.path.join(args.train_output_dir, "character_train.pt") if args.train_output_dir else None,
+                validation_output_path=os.path.join(args.validation_output_dir, "character_val.pt") if args.validation_output_dir else None,
+                train_split=args.train_split
+            )
+    elif args.tokenizer_type == "bpe":
+        tokenizer.bpe_tokenize(
+            input_files=args.input_files,
+            train_output_dir=args.train_output_dir,
+            validation_output_dir=args.validation_output_dir,
+            train_split=args.train_split
+        )
